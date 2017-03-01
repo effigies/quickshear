@@ -6,8 +6,10 @@ import nibabel as nb
 import logging
 
 
-def edge_mask(mask):
-    """ Find the edges of a mask or masked image
+def partial_edge_mask(mask):
+    """ Find partial edges of a mask or masked image
+
+    A partial edge is a voxel different to the one immediately posterior
 
     Parameters
     ----------
@@ -20,13 +22,8 @@ def edge_mask(mask):
     2D array
         Outline of sagittal profile (PS orientation) of mask
     """
-    # Sagittal profile
     brain = mask.any(axis=0)
-
-    # Simple edge detection
-    edgemask = 4 * brain - np.roll(brain, 1, 0) - np.roll(brain, -1, 0) - \
-                           np.roll(brain, 1, 1) - np.roll(brain, -1, 1) != 0
-    return edgemask.astype('uint8')
+    return brain ^ np.roll(brain, -1, 0)
 
 
 def convex_hull(brain):
@@ -122,8 +119,7 @@ def quickshear(anat_img, mask_img, buff=10):
     anat, anat_flip = orient_xPS(anat_img)
     mask, mask_flip = orient_xPS(mask_img)
 
-    edgemask = edge_mask(mask)
-    low = convex_hull(edgemask)
+    low = convex_hull(partial_edge_mask(mask))
     xdiffs, ydiffs = np.diff(low)
     slope = ydiffs[0] / xdiffs[0]
 
